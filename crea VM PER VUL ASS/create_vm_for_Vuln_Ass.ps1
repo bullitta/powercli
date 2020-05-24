@@ -1,11 +1,10 @@
-<#prende due parametri d'ingresso tutti obbligatori
- esempio di lancio:
-.\create_vm_for_Vuln_Ass.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1
+#prende due parametri d'ingresso tutti obbligatori
+# esempio di lancio:
+#.\create_vm_for_Vuln_Ass.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1
+# E Crea nuove vm a partire da template presenti nel vcenter
+# sempre per proseguire nell'esempio verranno create le vm:
+# RHEL74_2020_T1,WIN2016-MIDDL_2020_T1,WIN2012_2020_T1
 
-  Crea nuove vm a partire da template presenti nel vcenter
- sempre per proseguire nell'esempio verranno create le vm:
- RHEL74_2020_T1,WIN2016-MIDDL_2020_T1,WIN2012_2020_T1
-#>
 
 param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline)
 

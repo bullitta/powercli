@@ -5,7 +5,7 @@ richiede solo due parametri (obbligatori) d'ingresso:
 
 Eempio di utilizzo
 
-.\clona_tramite_copia_file.ps1 -server pas01d, pas04s -suffix 08082020_pa
+.\clona_tramite_copia_file.ps1 -server pas01d, pas04s -suffix 08082020_patch
 
 Lo script crea la copia sullo stesso datastore in cui si trova la macchina originale
 
@@ -56,7 +56,7 @@ $datastore|foreach {
 
 #spegne la macchina originale
 
-Stop-VM -VM $vm -Confirm:$false
+#Stop-VM -VM $vm -Confirm:$false
 
 
 
@@ -94,7 +94,7 @@ New-VM -name $vm_new -VMHost $VMHost -VMfilePath $filevmx.DataStoreFullPath
  
 # riavvia la macchina originale                  
 
-Start-VM -VM $vm -Confirm:$false
+#Start-VM -VM $vm -Confirm:$false
  
 
 }

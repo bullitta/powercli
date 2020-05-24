@@ -5,7 +5,7 @@ il nome del storage da cui ricavare il nome del datastore da assegnare
 
 esempio di lancio:
  
-.\assegna_datastore_a_cluster.ps1 -cluster AP_Center -wwn 4590409 -storage EMC2
+.\assegna_nuova_lun_a_nuovo_datastore.ps1 -cluster AP_Center -wwn 4590409 -storage EMC2
 
 
 
@@ -19,11 +19,16 @@ param ([Parameter(Mandatory)]$cluster,[Parameter(Mandatory)]$wwn, [Parameter(Man
 #Scan su tutti gli host del cluster per individuare le nuove LUN
 
 
-GET-cluster -name $cluster|Get-VMHost|Get-VMhostStorage -RescanAllHba
+#GET-cluster -name $cluster|Get-VMHost|Get-VMhostStorage -RescanAllHba
+
+
+
 
 #prende come riferimento il primo host del cluster per le operazioni di assegnazione
 
-$VMhost = Get-cluster -name $cluster|Get-VMHost -name *esx01*
+$VMhost = Get-cluster -name $cluster|Get-VMHost -name *esx*01*
+
+
 
 
 
@@ -56,6 +61,9 @@ $num_lun = [int]$num_lun + 1
 $num_lun = "0" + "$num_lun"
 $ds_new_name = $cluster +"_LUN" + $num_lun + "_" + $storage
 
+<#
 # Creo il nuovo datastore e gli assegno la nuova lun
 
 New-datastore -Vmfs -VMhost $VMhost -Name $ds_new_name -Path $LUN
+
+#>

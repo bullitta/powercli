@@ -1,4 +1,4 @@
-<# Prende due parametri d'ingresso, obbligatori:
+<# Prende due parametri d'ingresso tutti obbligatori
 
 1) elenco nomi server separati da virgola
 2) suffisso che si vuole dare al nome delle nuove macchine
@@ -8,7 +8,7 @@ Il datastore dove verrà depositato il clone verrà scelto mediante un procediment
 
 ESEMPIO DI LANCIO
 
-.\CLONA_VM.PS1 -server Pas87,cdert4e3 -suffix 06052020_229
+.\CLONA_VM.PS1 -server Pas87,cdert4e3 -suffix 06052020_patch 
 
 #>
 
@@ -30,14 +30,18 @@ $Datastore = $Cluster|get-datastore | where {$_.ExtensionData.Summary.MultipleHo
 
 $valid_datastore = @()
 
-$Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOTMatch "SRM" ) {
+$Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOTMatch "SRM" -and $_ -notmatch "library") {
                                                                      $name = @("$_".split('='))
                                                                      $nome = $name[1].Substring(0,$name[1].Length-1)
                                                                      $valid_datastore += "$nome"
                                                                      }
                        }
 
-#$valid_datastore
+#Questa parte serve a bypassare il problema della presenza di nomi  duplicati dei datastore (stesso nome ma id diverso)
+$dstoreid = @(get-datastore -name $valid_datastore[0])
+$dstore = get-datastore -id $dstoreid[0].id
+
+
 
 
 #Crea il clone
@@ -45,7 +49,8 @@ $Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOT
 $vm_new = $vm + "_" + $suffix
 $VM = GET-VM -name $vm
 
-New-VM -name $vm_new -VM $VM -Datastore $valid_datastore[0] -ResourcePool $Cluster
+New-VM -name $vm_new -VM $VM -Datastore $dstore -ResourcePool $Cluster
+
 
 
    }

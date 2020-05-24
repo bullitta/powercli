@@ -24,7 +24,7 @@ param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline,[Parameter(
 
 
 
-New-PSDrive -Name Z -PSProvider FileSystem -Root \\dcpt000s020\CC_VMWARE\PrivateCloud\Templates 
+#New-PSDrive -Name Z -PSProvider FileSystem -Root \\dcpt000s020\CC_VMWARE\PrivateCloud\Templates 
 
 
 

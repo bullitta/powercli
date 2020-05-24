@@ -1,10 +1,10 @@
 <# 
 questo script importa le vm nell'ambiente di certificazione di Torino
 prima di lanciarlo occorre collegarsi al server con il comando:
-Connect-VIServer -server ctopcmvcpyl01v.rete.poste -u .... -p .....
+Connect-VIServer -server .... -u .... -p .....
 Prende tre parametri d'ingresso tutti obbligatori e va lanciato nel seguente modo:
 
-.\Import_pvf_su_cert.ps1 -s WIN2012,WIN2012-ORACLEDB121,RHEL76 -b 2020_T1 -h 2020_1
+.\Import_pvf_su_cert.ps1 -s server1,server2 -b 2020_T1 -h 2020_1
 
 #>
 

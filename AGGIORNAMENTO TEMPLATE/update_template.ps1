@@ -1,13 +1,10 @@
-<#prende tre parametri d'ingresso tutti obbligatori
-lista nomi template
-baseline di riferimento
-hardening di riferimento
-E aggiorna i custom attribute dei template 
- esempio di lancio:
-.\update_template.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1 -h 2020_1
-#>
+#prende tre parametri d'ingresso tutti obbligatori
+# esempio di lancio:
+#.\update_template.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1 -h 2020_1
 
 
+#aggiorna tutte le voci dei custom attribute in base ai nomi dei teMplate ed alle indicazioni che
+#ci sono state fornite da alessio
 
 param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline,[Parameter(Mandatory)]$hardening)
 
