@@ -57,7 +57,7 @@ $datastore|foreach {
 
 #spegne la macchina originale
 
-#Stop-VM -VM $vm -Confirm:$false
+Stop-VM -VM $vm -Confirm:$false
 
 
 
@@ -86,7 +86,13 @@ Foreach ($ds in $DatastoreName) {
 
  $source = "vmstore:\$Datacenter\$ds_vmx\$vm"
  $dest = "vmstore:\$Datacenter\$ds_vmx\$vm_new"
- Copy-datastoreitem $source\* $dest
+ Copy-datastoreitem $source\*.vmx $dest
+ Copy-datastoreitem $source\*.vmxf $dest
+ Copy-datastoreitem $source\*.vmsd $dest
+ Copy-datastoreitem $source\*.nvram $dest
+ Copy-datastoreitem $source\$vm.vmdk $dest
+
+
 
 #rinomina il file vmx e tutti i file vm*
 mv $dest\$vm.vmx $dest\$vm_new.vmx

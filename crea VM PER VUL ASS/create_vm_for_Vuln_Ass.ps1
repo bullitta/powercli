@@ -38,6 +38,15 @@ Start-VM -VM $vm_new
 
 
 }
-   
+
+
+#Ricavo la tabella nomi macchina ip da mandare al gruppo patching
+
+   Foreach ($vm in $servername) {
+       $vm_new = $vm + "_" + "$baseline"
+       get-vm -name $vm_new|Select name, @{N="IP Address";E={@($_.guest.IPAddress[0])}}|format-table -HIDETABLEHEADER -autosize
+
+ 
+                                 }
     
 
