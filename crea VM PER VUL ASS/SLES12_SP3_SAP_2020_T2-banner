@@ -1,0 +1,7 @@
+#!/bin/sh
+
+cat /etc/SuSE-release | head -1
+echo "BASELINE:2020_T2"
+echo "HARDENING:Maggio 2019"
+
+

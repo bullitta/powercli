@@ -1,26 +1,28 @@
-#prende due parametri d'ingresso tutti obbligatori
-# esempio di lancio:
-#.\create_vm_for_Vuln_Ass.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1
-# E Crea nuove vm a partire da template presenti nel vcenter
-# sempre per proseguire nell'esempio verranno create le vm:
-# RHEL74_2020_T1,WIN2016-MIDDL_2020_T1,WIN2012_2020_T1
+<# Sposta le vm in un datastore di destinazione
+
+prende un parametr0 d'ingresso:
+
+elenco vm
 
 
-param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline)
+esempio di utilizzo
 
-$Cluster = Get-Cluster -Name S_TO_COMP
+.\sposta_vm_in_datastore_con_spazio_libero_maggiore.ps1 -s aktre,poer93 
+#>
+
+param ([Parameter(Mandatory)]$server)
 
 $servername = @($server.split(","))
 
-
 Foreach ($vm in $servername) {
+
+
 
 #Ricavo il datastore da utilizzare 
 # seleziona i datastore con multipath visibili al cluster che non contengono BCK, REPL, ....nel nome
 
-$ESXI =  GET-VMHOST -ID (GET-TEMPLATE -NAME $vm).HOSTID
 
-$cluster = Get-cluster -vmHOST $ESXI
+$cluster = Get-cluster -vm $vm
 $Datastore = $Cluster|get-datastore | where {$_.ExtensionData.Summary.MultipleHostAccess -eq 'true'}|sort-object -Property freespacegb -descending|select name
 
 $valid_datastore = @()
@@ -39,40 +41,14 @@ $dstore = get-datastore -id $dstoreid[0].id
 
 
 
-$vm_new = $vm + "_" + "$baseline"
 
 
 
 
 
 
-#creo la VM dal template
+$VM = GET-VM -name $vm
 
-New-VM -Name $vm_new -Template $vm -ResourcePool $Cluster -Datastore $dstore
-
-
-
-# sposto la VM nella dir Templates
-
-Get-VM -name $vm_new| Move-VM -Destination Templates 
-
-
-# AVVIO LA MACCHINA
-
-
-Start-VM -VM $vm_new 
-
+Move-VM -VM $VM -Datastore $dstore
 
 }
-
-
-#Ricavo la tabella nomi macchina ip da mandare al gruppo patching
-
-   Foreach ($vm in $servername) {
-       $vm_new = $vm + "_" + "$baseline"
-       get-vm -name $vm_new|Select name, @{N="IP Address";E={@($_.guest.IPAddress[0])}}|format-table -HIDETABLEHEADER -autosize
-
- 
-                                 }
-    
-

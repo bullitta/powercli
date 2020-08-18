@@ -1,0 +1,4 @@
+get-vm -name TESTCLU002|new-harddisk -DiskPath '[S_TO_BE_LUN007_NETAPP_FAS6290] TESTCLU001/TESTCLU001_1.vmdk' 
+get-vm -name TESTCLU002|new-harddisk -DiskPath '[S_TO_BE_LUN007_NETAPP_FAS6290] TESTCLU001/TESTCLU001_2.vmdk' 
+get-vm -name TESTCLU002|new-harddisk -DiskPath '[S_TO_BE_LUN007_NETAPP_FAS6290] TESTCLU001/TESTCLU001_3.vmdk' 
+get-vm -name TESTCLU002|new-harddisk -DiskPath '[S_TO_BE_LUN007_NETAPP_FAS6290] TESTCLU001/TESTCLU001_4.vmdk' 

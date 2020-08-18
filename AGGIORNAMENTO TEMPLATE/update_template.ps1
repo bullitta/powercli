@@ -1,11 +1,15 @@
-#prende tre parametri d'ingresso tutti obbligatori
-# esempio di lancio:
-#.\update_template.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1 -h 2020_1
+<#prende tre parametri d'ingresso tutti obbligatori
+  1) ELENCO template su cui intervenire
+  2) baseline version
+  3) hardening version
+
+ esempio di lancio:
+.\update_template.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1 -h 2020_1
 
 
-#aggiorna tutte le voci dei custom attribute in base ai nomi dei teMplate ed alle indicazioni che
-#ci sono state fornite da alessio
-
+  aggiorna tutte le voci dei custom attribute in base ai nomi dei teMplate ed alle indicazioni che
+  ci sono state fornite e sono presenti in un file di questa directory
+#>
 param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline,[Parameter(Mandatory)]$hardening)
 
 
@@ -18,7 +22,8 @@ Foreach ($vm in $servername) {
     # seguono una serie di pre-operazioni utili al popolamento dei custom attribute
     # in base al nome del template
     if ($dir -eq "RHE") {$dir = "RHEL"}
-    if ($dir -eq "SLE") {$dir = "SUSE"}
+    if ($dir -eq "SLE") {$dir = "SLES"}
+    
     $Array_vm = @($vm.Split("-"))
 
     If ($Array_vm.LENGTH -eq 1) {$Array_vm = @($vm.Split('_'))}
@@ -46,10 +51,16 @@ Foreach ($vm in $servername) {
     
     if ($Array_vm[0] -eq "SLES12") {$Array_vm[1] = ""}
 
-    
-    
+    #If ($Array_vm[0] -eq "SLES12") {$Array_vm[0] = "SUSE LINUX"}
+
     
 
+   ##... AGGIORNA LE ANNOTATION PER IL SIS OP
+    
+    If ($Array_vm[0] -match "WIN") {$Array_vm[0] =$Array_vm[0] -REPLACE 'WIN','WINDOWS '}
+    If ($Array_vm[0] -match "SLES") {$Array_vm[0] =$Array_vm[0] -REPLACE 'SLES','SUSE LINUX '}
+    If ($Array_vm[0] -match "RHEL") {$Array_vm[0] =$Array_vm[0] -REPLACE 'RHEL','RHEL '}
+    
 
  # aggiorna i custom attribute
    $VirtM|Set-Annotation -customattribute "BASELINE" -Value "$baseline"

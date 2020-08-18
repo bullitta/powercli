@@ -14,6 +14,9 @@ esempio di lancio:
 
 param ([Parameter(Mandatory)]$cluster,[Parameter(Mandatory)]$wwn, [Parameter(Mandatory)]$storage)
 
+##..Pulizia del nome lun: rimuovi i ":" se presenti
+
+$wwn = $wwn -replace ':',''
 
 
 #Scan su tutti gli host del cluster per individuare le nuove LUN
@@ -61,9 +64,10 @@ $num_lun = [int]$num_lun + 1
 $num_lun = "0" + "$num_lun"
 $ds_new_name = $cluster +"_LUN" + $num_lun + "_" + $storage
 
-<#
+$ds_new_name
+
+
 # Creo il nuovo datastore e gli assegno la nuova lun
 
 New-datastore -Vmfs -VMhost $VMhost -Name $ds_new_name -Path $LUN
 
-#>

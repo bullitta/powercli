@@ -1,10 +1,14 @@
 <# 
-questo script importa le vm nell'ambiente di certificazione di Torino
-prima di lanciarlo occorre collegarsi al server con il comando:
-Connect-VIServer -server ctopcmvcpyl01v.rete.poste -u .... -p .....
-Prende tre parametri d'ingresso tutti obbligatori e va lanciato nel seguente modo:
+   questo script importa le vm predisposte su sviluppo per il test VA
 
-.\Import_pvf_su_cert.ps1 -s WIN2012,WIN2012-ORACLEDB121,RHEL76 -b 2020_T1 -h 2020_1
+   Prende tre parametri d'ingresso tutti obbligatori
+   1) elenco template da esportare
+   2) versione baseline
+   3) versione hardening
+
+   esempio di utilizzo:
+
+   .\Import_template.ps1 -s WIN2012,WIN2012-ORACLEDB121,RHEL76 -b 2020_T1 -h 2020_1
 
 #>
 
@@ -14,16 +18,23 @@ param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline,[Parameter(
 
 New-PSDrive -Name Z -PSProvider FileSystem -Root \\dcpt000s020\CC_VMWARE\PrivateCloud\Templates 
 
+if (-not (get-psdrive -literalname z)) {
+                                        write-host  "impossibile collegarsi alla share contenente i template"
+                                        write-host "Risolvere il problema prima di continuare"
+                                        exit 
+                                        }
+
 
 
 $servername = @($server.split(","))
 
 #Imposto alcune variabili che mi serviranno per l'import, uno anche per lo spostamento della macchina
 #nel folder Templates ($Folder)
-$DATASTORE = "C_TO_COMP_NETAPP"
-$VMHOST = Get-VMHost -name *comp*esx01*
+
+
+
+
 $Folder = Get-Folder -Name Templates
-$PORTGROUP = Get-VDPortgroup -name vxw-dvs-70-virtualwire-92-sid-5019-TO-M2-LS-CERT-b5607fed-ef2c-460b-addb-637469b
 
 
 z:
@@ -31,14 +42,68 @@ z:
 
 
 Foreach ($vm in $servername) {
+#Determino l'host in cui si trova il template
+$VMHOST = (Get-View -ViewType VirtualMachine -Filter @{'Name'="$vm$"} |Select Name,@{N='VMHost';E={Get-View -Id $_.Runtime.Host -Property Name | Select -ExpandProperty Name}}).VMhost
+
+$cluster = Get-cluster -vmHOST $VMHOST
+
+if (-not $cluster) {
+                   write-host "Problema nell'identificazione del cluster del vecchio template"
+                   Write-Host "Verificare la presenza del vecchio template prima di proseguire"
+                   exit
+                   }
+
+#Ricavo il nome di un port group da utilizzare per l'import
+$vdswitch = get-vdswitch -vmhost $VMHOST
+$All_PORTGROUP = Get-VDPortgroup -vDSWITCH $vdswitch
+$PORTGROUP = $All_PORTGROUP[0]
+
+
+
+
+#Ricavo il datastore da utilizzare per salvare il template
+# seleziona i datastore con multipath visibili al cluster che non contengono BCK e REPL e altri #suffissi nel nome
+
+
+
+$Datastore = $Cluster|get-datastore | where {$_.ExtensionData.Summary.MultipleHostAccess -eq 'true'}|sort-object -Property freespacegb -descending|select name
+
+$valid_datastore = @()
+
+$Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOTMatch "SRM" -and $_ -notmatch "library" -and $_ -notmatch "NAS" -and $_ -notmatch "VOIP" -and $_ -notmatch "GENESYS" -and $_ -notmatch "NFS" -and $_ -notmatch "OPSH") {
+                                                                     $name = @("$_".split('='))
+                                                                     $nome = $name[1].Substring(0,$name[1].Length-1)
+                                                                     $valid_datastore += "$nome"
+                                                                     }
+                       }
+
+#Questa parte serve a bypassare il problema della presenza di nomi  duplicati dei datastore (stesso nome ma id diverso)
+$dstoreid = @($Cluster|get-datastore -name $valid_datastore[0])
+$DATASTORE = get-datastore -id $dstoreid[0].id
+
 
 $vm_new = $vm + "_" + "$baseline"
 $dir= $vm.SubString(0,3)
 if ($dir -eq "RHE") {$dir = "RHEL"}
 if ($dir -eq "SLE") {$dir = "SUSE"}
 
+
+
+
+
 $ovffile = $vm_new + ".ovf"
 $OvfConfiguration = Get-OvfConfiguration -Ovf "$dir\CURRENT\$vm\$ovffile"
+
+
+#IMPOSTA il networkmapping dell'oggetto $OvfConfiguration
+
+$ovfConfiguration.ToHashTable()
+    $ovfConfiguration = @{
+       "NetworkMapping.DPortGroup"="$PORTGROUP";
+       "Source"="$dir\CURRENT\$vm\$ovffile"
+        }
+
+$VMHOST
 
 
 #Importa la virtual machine
@@ -54,14 +119,20 @@ Datastore = $DATASTORE
 
 
 
+
+
 Import-Vapp @Parameters
 
 
 $VirtM = Get-VM -name $vm_new
 
+
+
 #Imposta i parametri di rete sulla vm importata
 
 $VirtM |Get-NetworkAdapter|Set-NetworkAdapter -NetworkName $PORTGROUP -Confirm:$false
+
+
 
 #Imposta i custom attribute in base al nome della macchina
 
@@ -72,7 +143,7 @@ $Array_vm = @($vm.Split("-"))
     If ($Array_vm.LENGTH -eq 1) {$Array_vm = @($vm.Split('_'))}
 
     if ($Array_vm[1] -eq "OWEBL121") {$Array_vm[1] = "ORACLE  WEBLOGIC"}
-    if ($Array_vm[1] -eq "APACHE2437") {$Array_vm[1] = "APACHE HTTPD SERVER 2.4"}
+    if ($Array_vm[1] -eq "APACHE24") {$Array_vm[1] = "APACHE HTTPD SERVER 2.4"}
     if ($Array_vm[1] -eq "JBOSS71") {$Array_vm[1] = "JBOSS"}
     if ($Array_vm[1] -eq "MYSQL") {$Array_vm[1] = "MYSQL DATABASE 5.7.25"}
     if ($Array_vm[1] -eq "OHTTP") {$Array_vm[1] = "ORACLE HTTP"}
@@ -109,19 +180,20 @@ $Array_vm = @($vm.Split("-"))
       else {$VirtM|Set-Annotation -customattribute "MIDDLEWARE" -Value ""}
 
 
-#Sposta la vm nella dir Templates
-$VirtM | Move-VM -Destination $Folder
 
 #COnverte la VM in template
 
  $VirtM |Set-VM -Totemplate -confirm:$false
 
-#Cancella il vecchio template
+#Cancella il vecchio template solo se è gia presente il nuovo
 
-Remove-Template -Template $vm -DeletePermanently -Confirm:$false
+if (get-template -name $vm_new) {Remove-Template -Template $vm -DeletePermanently -Confirm:$false}
 
 #Rinomina il nuovo template
 Set-Template -Template $vm_new -Name $vm
+
+#Sposta il template nella dir Templates
+Move-Template -template $vm  -Destination $Folder
 
 
 

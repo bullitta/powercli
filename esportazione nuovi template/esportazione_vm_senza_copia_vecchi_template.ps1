@@ -6,7 +6,7 @@
 
  esegue in ordine le seg operazioni: 
    - aggiorna i custom attribute in base ai nomi delle macchine e ai parametri baseline (b) e hardening (h)
-   -  sposta il vecchio export da current a old nella share
+   -  
    -   spegne le vm   
    -   modifica le proprietà della rete delle vm 
    - le esporta nella current dir, 
@@ -18,7 +18,7 @@
  
 #>
 
-param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline,[Parameter(Mandatory)]$hardening, [Parameter(Mandatory)]$oldbaseline)
+param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$baseline,[Parameter(Mandatory)]$hardening)
 
 # mi collego alla share dei template
 
@@ -40,7 +40,7 @@ Foreach ($vm in $servername) {
     
     $dir= $vm.SubString(0,3)
     $vm_new = $vm + "_" + $baseline
-    $vm_old = $vm + "_" + $oldbaseline
+    #$vm_old = $vm + "_" + $oldbaseline
    
     $VirtM = Get-VM -name $vm_new
     # seguono una serie di pre-operazioni utili al popolamento dei custom attribute
@@ -96,7 +96,7 @@ z:
 
 
 
-Move-item $dir\CURRENT\$vm  old\$dir\
+#Move-item $dir\CURRENT\$vm  old\$dir\
 
 
 
@@ -129,6 +129,8 @@ get-vm -name $vm_new |Export-vapp -Destination $dir\CURRENT\
 #verifica il corretto esito dell'esportazione, in caso di assenza del file MF interrompe l'operazione
 $mffile = $vm_new + ".mf"
 
+#Start_Sleep -s 60
+
 if (-not (get-item "$dir\CURRENT\$vm_new\$mffile")) {
                                          write-host "Export della macchina $vm non completo"
                                          write-host "Verificare il motivo e ripetere l'operazione"
@@ -141,7 +143,7 @@ Rename-Item "$dir\CURRENT\$vm_new" $vm
 
 # rinomina la dir old
 
-Rename-Item "OLD\$dir\$vm" $vm_old
+#Rename-Item "OLD\$dir\$vm" $vm_old
 
 
 
@@ -161,6 +163,8 @@ Remove-Template -Template $vm -DeletePermanently -Confirm:$false
 #Rinomina il nuovo template
 Set-Template -Template $vm_new -Name $vm
 
-
-
+#sposta il template nella dir Template
+#move-template -template $vm -Destination (get-folder -name "Templates"
 }
+
+C:
