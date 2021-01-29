@@ -8,6 +8,8 @@
    
    IMPORTANTE IL FILE ISO DEVE TROVARSI SULLA STESSA DIR DELLO SCRIPT INOLTRE E' NECESSARIO CHE LA VM
    SIA SPENTA, qualora non fosse possibile spegnerla le ultime due operazioni vanno fatte da console grafica
+   EVITARE DI USARE LA VRC (vmware remote console) perchè altrimenti bisogna lasciare la sessione vrc attiva 
+   per garantire la connessione all'iso
 #>
 
 param ([Parameter(Mandatory)]$server, [Parameter(Mandatory)]$iso)

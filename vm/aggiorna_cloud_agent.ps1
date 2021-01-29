@@ -1,26 +1,29 @@
 ﻿<#
-  Aggiorna cloud agent su template windows
+  Aggiorna cloud agent vRA su template windows
   lo script aggiunge lo script non iterattivo:  prepare_vra_template1.ps1 alla cartella 
    C:\PREPARE_VRA\prepare_vra_template_windows\prepare_vra_template_windows
    e lo esegue
-   Poi
-  PRENDE 5 parametri d'ingresso:
+   
+  PRENDE 6 parametri d'ingresso:
     1) elenco dei server su cui deve essere effettuato l'aggiornamento
     2) password dell'user administrator delle macchine
     3) ip d assegnare alla vm
     4)dns da assegnre alla vm
     5) gateway da assegnare alla vm
+    6) subnet da assegnare alla vm
 
   Esempio di utilizzo:
-  .\aggiorna_cloud_agent.ps1 -server qwte,atre -pwd password -ip 10.11.1.1 -dns 10.2.3.1 -gateway 1.1.1.1
+  .\aggiorna_cloud_agent.ps1 -server qwte,atre -pwd password -ip 10.11.1.1 -dns 10.2.3.1 -gateway 1.1.1.1 -snet 255.255.254.0
 
 ATTENZIONE lo script prepare_vra_template1.ps1 per funzionare ha bisogno che la vm sia collegata alla rete
 per questo motivo i parametri ip, dns e gateway vanno visti di volta in volta, in generale si ricavano andando a 
 vederli sul vRealize  Automation: tab infrastruttura e poi prenotazioni ---> profili di rete
-
+Alla fine dello script viene lanciato update_template.ps1 per reimpostare i custom attribute del template, assicurarsi che
+lo script sia presente nella cartella "..\aggiornamento template" e che i parametri di lancio (baseline e hardening)
+siano corretti
 
 #>
-param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$pwd,[Parameter(Mandatory)]$ip,[Parameter(Mandatory)]$dns,[Parameter(Mandatory)]$gw)
+param ([Parameter(Mandatory)]$server,[Parameter(Mandatory)]$pwd,[Parameter(Mandatory)]$ip,[Parameter(Mandatory)]$snet,[Parameter(Mandatory)]$dns,[Parameter(Mandatory)]$gw)
 
 $servername = @($server.split(","))
 
@@ -37,6 +40,11 @@ Foreach ($vm in $servername) {
 
 
 $vm_template = Get-Template -name $vm
+
+if (-not $vm_template) {
+                        Write-Host "Template: $vm non presente sul vcenter, risolvere il problema prima di continuare"
+                        exit
+                       } 
 
 #Determino l'host in cui si trova il template
 $VMHOST = (Get-View -ViewType VirtualMachine -Filter @{'Name'="$vm$"} |Select Name,@{N='VMHost';E={Get-View -Id $_.Runtime.Host -Property Name | Select -ExpandProperty Name}}).VMhost
@@ -60,7 +68,7 @@ $Datastore = $cluster|get-datastore | where {$_.ExtensionData.Summary.MultipleHo
 
 $valid_datastore = @()
 
-$Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOTMatch "SRM" -and $_ -notmatch "library" -and $_ -notmatch "NAS" -and $_ -notmatch "VOIP" -and $_ -notmatch "GENESYS" -and $_ -notmatch "NFS" -and $_ -notmatch "OPSH") {
+$Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOTMatch "SRM" -and $_ -notmatch "library" -and $_ -notmatch "NAS" -and $_ -notmatch "VOIP" -and $_ -notmatch "GENESYS" -and $_ -notmatch "NFS" -and $_ -notmatch "OPSH" -and $_ -notmatch "SHARED") {
                                                                      $name = @("$_".split('='))
                                                                      $nome = $name[1].Substring(0,$name[1].Length-1)
                                                                      $valid_datastore += "$nome"
@@ -77,23 +85,53 @@ $DATASTORE = get-datastore -id $dstoreid[0].id
 
 #Crea una nuova vm su cui dovranno essere eseguiti le operazioni di aggiornamento dell'agent
 
-$vm_new = $vm + "_agg_cloud_agent"
+$vm_new = $vm + "_agg_cloud_agent" 
 
-New-VM -name $vm_new -Template $vm_template -resourcePool $cluster -datastore $DATASTORE
 
+$task = New-VM -name $vm_new -Template $vm_template -resourcePool $cluster -datastore $DATASTORE -RunAsync
+write-host "Clone dal template $vm in corso"
+
+while ('Success','Error' -notcontains $task.State){
+                        sleep 2
+                        write-host ".." -NoNewline
+                        $task = Get-Task -Id $task.Id 
+                        }
+
+
+if ($task.State -eq "Error") {
+                               write-host "problemi nella creazione della vm: ""$vm_new"", risolverli prima di proseguire"
+                               exit
+                             }
+#>
 
 
 $VMachine = GET-VM -name $vm_new
 
+
+
+
+
+
+
+
+
 $USER = $VMachine.extensiondata.guest.hostname + "\"  + "ADMINISTRATOR"
 
-# nell'ipotesi che la vm abbia una sola scheda di rete, aggiunge il port group che termina in PROD-02
+# nell'ipotesi che la vm abbia una sola scheda di rete, aggiunge il port group che termina in PROD-02/CERT-02
 # ad eccezione dei sistemi su SDDC Torino dove invece per un refuso bisogna cercare quello che termina 
 # con 02-PROD
-# vxw-dvs-153-virtualwire-7-sid-5006-TO-M2-LS-Prod-02-PROD
+# 
 
   
 $PGROUP = GET-VDPORTGROUP|WHERE -PROPERTY name -MATCH "PROD-02$"|WHERE -PROPERTY VDSwitch -MATCH "DVS_P_RM1_WIN_PCM01_NEW"
+
+IF (-NOT $PGROUP) {$PGROUP = GET-VDPORTGROUP|WHERE -PROPERTY name -MATCH "PROD-02"|WHERE -PROPERTY VDSwitch -MATCH "DVS_P_TO_WIN_PCM01"
+                  }
+
+IF (-NOT $PGROUP) {$PGROUPs = @(GET-VDPORTGROUP|WHERE -PROPERTY name -MATCH "CERT-02$"|WHERE -PROPERTY VDSwitch -MATCH "COMP")
+                     $PGROUP = $PGROUPs[0]   
+
+                   }
 
 
 
@@ -103,28 +141,44 @@ Set-NetworkAdapter -Networkadapter $netadapter -PortGroup $PGROUP -Confirm:$fals
 
 
 
-
-#starta la vm Assegna: ip - gateway, dns
+# Avvia la vm ed Assegna: ip - gateway, dns
 
 Start-VM -vm $VMachine
-# a SECONDA della versione di windows imposta i comandi per l assegnazione dell ip e del dns
-
-if ( $vm -match "2012") {
-               $assign_ip = "netsh interface ipv4 set address name=Ethernet0 static $ip 255.255.240.0 $gw"
-               $assign_dns = "netsh interface ipv4 set dns name=Ethernet0 static $dns"
-               }
-if ( $vm -match "2016") {
-               $adapter = '"Ethernet0 2"'
-               $assign_ip = "netsh interface ipv4 set address $adapter  static $ip 255.255.240.0 $gw"
-               $assign_dns = "netsh interface ipv4 set dnsserver $adapter static $dns primary"
-               }
 
  #PRIMA di lanciare i comandi sulla vm aspetta 60 sec, 
  # a seconda della vm 60 sec potrebbero non essere suff per trovarla in stato running
-     start-sleep -s 60              
+    start-sleep -s 60 
+
+#Piccola procedura per ricavare il nome della scheda ethernet
+$ipconfig =  Invoke-vmscript -vm $VMachine -scriptText "ipconfig" -scripttype bat -GuestUser $USER -GuestPassword $pwd
+$array = @($ipconfig.Split([Environment]::NewLine, [StringSplitOptions]::RemoveEmptyEntries))
+$lngth = $array[1].length - 17
+$eth0 = $array[1].substring(17)
+$eth0 = $eth0.substring(0,$eth0.length -1)
+
+
+  
+
+# a SECONDA della versione di windows imposta i comandi per l assegnazione dell ip e del dns
+
+
+
+if ( $vm -match "2012") {
+               $assign_ip = "netsh interface ipv4 set address name=""$eth0"" static $ip $snet $gw"
+               $assign_dns = "netsh interface ipv4 set dns name=""$eth0"" static $dns"
+               }
+if ( $vm -match "2016") {
+               
+               $assign_ip = "netsh interface ipv4 set address ""$eth0""  static $ip $snet $gw"
+               $assign_dns = "netsh interface ipv4 set dnsserver ""$eth0"" static $dns primary"
+               }
+
+           
 
 Invoke-vmscript -vm $VMachine -scriptText $assign_ip -scripttype bat -GuestUser $USER -GuestPassword $pwd 
 Invoke-vmscript -vm $VMachine -scriptText $assign_dns -scripttype bat -GuestUser $USER -GuestPassword $pwd
+
+
 
 # mi collego alla share che contiene lo script d'installazione dell'agent e il .bat
 
@@ -142,9 +196,9 @@ $destination = "C:\PREPARE_VRA\prepare_vra_template_windows\prepare_vra_template
 Get-item "y:\prepare_vra_template1.ps1"| copy-vmGuestFile -LocalToGuest -VM $VMachine  -Destination $destination -guestuser $USER -guestpassword $pwd -confirm:$false -force
 
 
-#Esegue lo script prepare_vra_template.ps1 nella vm
+#Esegue lo script prepare_vra_template1.ps1 nella vm
 Invoke-vmscript -vm $VMachine -scriptText "$destination\prepare_vra_template1.ps1" -Guestuser $USER -guestpassword $pwd
-
+#>
 
 #Copia il file bat  nella vm
 
@@ -159,10 +213,10 @@ $clean_evt_log = "Clear-EventLog -LogName $logtype"
 # fa una chiusura pulita del guest host
 Stop-VMGuest -VM $VMachine -Confirm:$false
 
-
+sleep 60
 
 #Chiude la VM e genera il nuovo template
-$VMachine|Stop-vm -Confirm:$false|out-null
+#$VMachine|Stop-vm -Confirm:$false|out-null
 $VMachine |Set-VM -Totemplate -confirm:$false
 #Cancella il vecchio template solo se Ã¨ gia presente il nuovo
 
@@ -178,6 +232,10 @@ Move-Template -template $vm  -Destination $Folder
 # correggere i valori di baseline e hardening in base allo stato del software sul template
 cd "..\aggiornamento template"
 .\update_template.ps1 -s $vm -b 2020_T2 -h 2020_1
+
+cd ..\vm
+
+#>
 
 }
 

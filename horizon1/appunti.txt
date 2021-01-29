@@ -1,0 +1,1 @@
+-server PVDIMASTERPROVA -cluster P_RM1_COMP_VDI01  -iso SW_DVD9_Win_Pro_Ent_Edu_N_10_1803_64BIT_Italian_-4_MLF_X21-87149.ISO -ram 8 -cpu 2

@@ -1,7 +1,10 @@
 #prende due parametri d'ingresso tutti obbligatori
+#  1)elenco nomi template delle macchine da creare
+#  2)suffisso da inserire nel nome delle macchine 
 # esempio di lancio:
-#.\create_vm_for_Vuln_Ass.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1
-# E Crea nuove vm a partire da template presenti nel vcenter
+#    .\create_vm_for_Vuln_Ass.ps1 -s RHEL74,WIN2016-MIDDL,WIN2012 -b 2020_T1
+#
+#  Crea nuove vm a partire da template presenti nel vcenter
 # sempre per proseguire nell'esempio verranno create le vm:
 # RHEL74_2020_T1,WIN2016-MIDDL_2020_T1,WIN2012_2020_T1
 
@@ -21,6 +24,11 @@ Foreach ($vm in $servername) {
 $ESXI =  GET-VMHOST -ID (GET-TEMPLATE -NAME $vm).HOSTID
 
 $cluster = Get-cluster -vmHOST $ESXI
+
+<##
+# Questa parte è stata commentata perchè su sviluppo i template per convenzione devono
+# stare su un datastore denominato *_SHARED
+
 $Datastore = $Cluster|get-datastore | where {$_.ExtensionData.Summary.MultipleHostAccess -eq 'true'}|sort-object -Property freespacegb -descending|select name
 
 $valid_datastore = @()
@@ -35,6 +43,11 @@ $Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOT
 #Questa parte serve a bypassare il problema della presenza di nomi  duplicati dei datastore (stesso nome ma id diverso)
 $dstoreid = @($Cluster|get-datastore -name $valid_datastore[0])
 $dstore = get-datastore -id $dstoreid[0].id
+
+#>
+
+$dstore = get-datastore|where name -match "_SHARED"
+
 
 
 

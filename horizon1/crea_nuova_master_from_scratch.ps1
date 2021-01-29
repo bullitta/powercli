@@ -1,24 +1,37 @@
 <# Lo script crea una nuova vm e monta un file iso 
-   Prende cinque  parametri d'ingresso:
+   Prende sette  parametri d'ingresso:
    Il nome della vm
    Il nome del cluster in cui si vuole creare la vm
    Il nome del file iso
    la ram da assegnare in Gb
    le cpu da assegnare
+   il nome del portgroup
+   il tipo di sis op (per per VDI ho queste tre opzioni: win7, win10 e win2012
+   
    Esempio di lancio:
-   .\create_vm_from_scratch.ps1 -server vm1 -cluster Clu -iso yubutu.iso -ram 4 -cpu 2
-   IMPORTANTE IL FILE ISO DEVE TROVARSI SULLA STESSA DIR DELLO SCRIPT
-   Il nome della iso deve rispettare determinate condizioni, altrimenti se adopero un nome qualsiasi
-   il programma va lanciato con un sesto parametro opzionale che è il tipo di sis operativo che
-   sarà installato sulla macchina, qui sotto uno schema:
-   windows 10 64 bit = windows9_64Guest
+   .\create_vm_from_scratch.ps1 -server vm1 -cluster Clu -iso tu.iso -ram 4 -cpu 2 -portg AKTY -op win10
+   
+   Una volta creata la vm vengono eseguite le seg modifiche
+    
+   modifica dello scsi buffer in tipo LSI logic sas (vedi prb he BusLogic SCSI adapter
+    is not supported for 64-bit guests. See the documentation for the appropriate type of SCSI adapter to use with 64-bit guests.
+An error was received from the ESX host while powering on )
+  
+   
+   modifica dell' adapter  di rete in tipo VMXNET 3
 #>
 
-param ([Parameter(Mandatory)]$server, [Parameter(Mandatory)]$cluster, [Parameter(Mandatory)]$iso,[Parameter(Mandatory)]$ram, [Parameter(Mandatory)]$cpu, $ostype  )
+param ([Parameter(Mandatory)]$server, [Parameter(Mandatory)]$cluster, [Parameter(Mandatory)]$iso,[Parameter(Mandatory)]$ram, [Parameter(Mandatory)]$cpu, [Parameter(Mandatory)]$portg )
 
 $Cluster = get-cluster -name $cluster
-$split_iso =  @($iso.split("-"))
-$os_type = $split_iso[0] + "64" + "Guest"
+
+# Ricavo il portgroup
+$pg = get-vdportgroup -name $portg
+# ricavo il virtualmachineGuestOsIdentifier
+if ($op -match win10 {$op = "windows9_64Guest"}
+ else if ($op -match win2012) {$op = "windows8Server64Guest"}
+   else if ($op -match win7) {$op = "windows7_64Guest"}
+
 
 
 
@@ -43,18 +56,16 @@ $Datastore|foreach {if ($_ -NOTmatch "BCK" -and $_ -NOTMatch "REPL" -and $_ -NOT
 $dstoreid = @($Cluster|get-datastore -name $valid_datastore[0])
 $dstore = get-datastore -id $dstoreid[0].id
 
-$os_type
-
-##..Creo la vm e cambio il tipo di Guest id in base al nome della iso
 
 
-<#
-New-VM -Name $server -ResourcePool $Cluster -Datastore $dstore -MemoryGb $ram -NumCpu $cpu
-Set-VM  $server -GuestId $os_type -Confirm:$false
+##..Creo la vm 
 
-##.. In caso il sys op è ubuntu corregge un problema relativo al tipo bus scsi
 
-if ( $split_iso[0] -eq "ubuntu") {Get-scsicontroller -vm $server|Set-ScsiController -Type VirtualLsiLogic -Confirm:$false}
+
+New-VM -Name $server -ResourcePool $Cluster -Datastore $dstore -MemoryGb $ram -NumCpu $cpu -diskGb 30 -portgroup $pg -GuestId $op
+
+
+
 
 ##.. ricostruisco il path in cui si trovano i file della nuova vm
 $dcenter = get-datacenter -vm $server
@@ -70,7 +81,13 @@ Copy-datastoreitem  -item $iso -Destination $destination_path
 $cd = New-CDdrive -VM $server -ISOPath "[$dstore] $server\$iso"  -Startconnected
 Set-CDdrive -CD $cd  -Confirm:$false
 
+# iMPOSTO il network adapter della nuova vm
+$adapter = get-networkadapter -vm $server
+Set-NetworkAdapter -networkadapter $adapter -type VMXNET3 -confirm:false
+
+# Imposta il tipo di SCSI controller
+$scsiadapter = get-scsicontroller -vm $server
+set-scsicontroller -scsicontroller $scsiadapter -type virtuallsilogicsas
 
 
-#>
 

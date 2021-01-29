@@ -2,5 +2,6 @@ git_instruction.txt
 vmware_fix/
 perl/
 vm/*.iso
+vm/promem*
 vm/prepare_vra_template1.ps1
 secret/
