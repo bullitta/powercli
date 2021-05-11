@@ -7,7 +7,7 @@ e genera l'elenco degli utenti che appartengono al gruppo
 esempio di utilizzo
 
 .\list-users-in-group  -g "SAP logon"
-testata solo una volta
+
 #>
 
 param ([Parameter(Mandatory)]$group )
@@ -20,4 +20,4 @@ if (!$verifiedGroup) {Write-Host "Gruppo non presente su AD"
 
                        }
 
-                       get-adgroupmember -identity $verifiedGroup|fl name
+                       get-adgroupmember -identity $verifiedGroup|Select -ExpandProperty Name

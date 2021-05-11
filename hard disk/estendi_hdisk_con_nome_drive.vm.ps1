@@ -45,6 +45,7 @@ if ( $Hdisk.Length -gt 1 ) {Write-Host "lo script non riesce ad individuare univ
           Exit}
           
 $size = $size + $Hdisk.CapacityGb
+$VM.Guest
 $size
 $capacity
 $Hdisk.name
