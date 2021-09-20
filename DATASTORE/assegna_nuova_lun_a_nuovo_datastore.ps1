@@ -29,12 +29,12 @@ $wwn = $wwn -replace ':',''
 
 #prende come riferimento il primo host del cluster per le operazioni di assegnazione
 
-$VMhost = Get-cluster -name $cluster|Get-VMHost -name *esx*01*
+$VMhost = Get-cluster -name $cluster|Get-VMHost -name *01*
 
 
 
-
-
+$VMhost
+/*
 #verifica se la LUN risulta già assegnata
 $LUN = "naa." + $wwn
 $AllDatastores = $VMhost|Get-datastore
@@ -69,5 +69,6 @@ $ds_new_name
 
 # Creo il nuovo datastore e gli assegno la nuova lun
 
-New-datastore -Vmfs -VMhost $VMhost -Name $ds_new_name -Path $LUN
+#New-datastore -Vmfs -VMhost $VMhost -Name $ds_new_name -Path $LUN
 
+*/

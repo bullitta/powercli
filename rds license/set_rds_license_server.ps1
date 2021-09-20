@@ -23,7 +23,8 @@ param ([Parameter(Mandatory)]$servername,[Parameter(Mandatory)]$licenseServer,[P
 
 Foreach ($server in $servername) {
 
-$vm = get-vm -name $server
+$vm = get-vm -name $server|where-object {$_.powerstate -eq "PoweredOn"}
+
 
 #Copia lo script  nella vm
 Get-item "set_rds_license_server_script.ps1"| copy-vmGuestFile -LocalToGuest -VM $vm  -Destination "c:\set_rds_license_server_script.ps1" -guestuser "administrator" -guestpassword $password -confirm:$false -force
@@ -34,7 +35,7 @@ $outputchomped = $output.scriptoutput -replace "\n",""
 write-host ($server + ":  " + $outputchomped)
 
 #rimuove lo script
-#Invoke-vmscript -vm $vm -scriptText "del c:\set_rds_license_server_script.ps1" -Guestuser "administrator" -guestpassword $password
+Invoke-vmscript -vm $vm -scriptText "del c:\set_rds_license_server_script.ps1" -Guestuser "administrator" -guestpassword $password
 
 
 #$vm

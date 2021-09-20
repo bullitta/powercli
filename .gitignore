@@ -5,3 +5,4 @@ vm/*.iso
 vm/promem*
 vm/prepare_vra_template1.ps1
 secret/
+vcenter/*.csv

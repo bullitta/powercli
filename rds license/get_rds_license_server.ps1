@@ -22,7 +22,7 @@ param ([Parameter(Mandatory)]$servername,[Parameter(Mandatory)]$password)
 
 Foreach ($server in $servername) {
 
-$vm = get-vm -name $server
+$vm = get-vm -name $server|where-object {$_.powerstate -eq "PoweredOn"}
 
 #Copia lo script  nella vm
 Get-item "get_rds_license_server_script.ps1"| copy-vmGuestFile -LocalToGuest -VM $vm  -Destination "c:\get_rds_license_server_script.ps1" -guestuser "administrator" -guestpassword $password -confirm:$false -force

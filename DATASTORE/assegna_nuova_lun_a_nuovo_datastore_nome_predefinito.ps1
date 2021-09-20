@@ -31,7 +31,7 @@ GET-cluster -name $cluster|Get-VMHost|Get-VMhostStorage -RescanAllHba
 
 ##..prende come riferimento il primo host del cluster per le operazioni di assegnazione
 
-$VMhost = Get-cluster -name $cluster|Get-VMHost -name *esx*01*
+$VMhost = Get-cluster -name $cluster|Get-VMHost -name *01*
 
 
 

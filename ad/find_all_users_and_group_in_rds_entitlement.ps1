@@ -11,7 +11,7 @@ esempio d'uso:
 #Ricava l'elenco delle applicazioni e le salva in un file temporaneo
 $all_application = (get-hvapplication).data.name > all_app_name
 
-#Per ogni applicazione ricava l'elenco dei gruppi assegnati e li inserisce in un array
+#Per ogni applicazione ricava l'elenco dei gruppi e degli user assegnati e li inserisce in un array
  foreach ($line in get-content .\all_app_name) {
 
      $ent_group = get-hventitlement  -resourcetype application -resourcename $line
@@ -29,5 +29,7 @@ foreach ($elem in $array) {
   if ($elem -match "^VDI") {$elenco_gruppi = $elem + "," + $elenco_gruppi}
   else {$elenco_user = $elem + "," + $elenco_user}
 }
+# visualizza i due elenchi: gruppi utilizzati negli entitlement e user assegnati direttamente
+# agli entitlement
   $elenco_gruppi
   $elenco_user

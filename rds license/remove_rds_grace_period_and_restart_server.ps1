@@ -23,7 +23,7 @@ param ([Parameter(Mandatory)]$servername,[Parameter(Mandatory)]$password)
 
 Foreach ($server in $servername) {
 $server = $server
-$vm = get-vm -name $server
+$vm = get-vm -name $server|where-object {$_.powerstate -eq "PoweredOn"}
 
 #Copia lo script  nella vm
 Get-item "reset_grace_period_script.ps1"| copy-vmGuestFile -LocalToGuest -VM $vm  -Destination "c:\reset_grace_period_script.ps1" -guestuser "administrator" -guestpassword $password -confirm:$false -force
