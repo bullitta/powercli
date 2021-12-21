@@ -6,7 +6,7 @@ e genera l'elenco degli utenti che appartengono ai vari gruppi
 
 esempio di utilizzo
 
-.\list-users-in-group  -g "SAP logon", "msql logon"
+.\find_all_user_in_group_list.ps1  -g "SAP logon", "msql logon"
 
 
 NOTE: si combina bene con lo script ..\horizon1\find-all-group-user-in-all-entitlements.ps1

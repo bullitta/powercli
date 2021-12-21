@@ -1,9 +1,9 @@
-﻿<# lo script ricava l'elenco di tutte le vm contenute in un host esxi e il sist operativo
+﻿<# lo script ricava l'elenco di tutte le vm contenute in un cluster esxi e il sist operativo
 installato sulle vm e lo salva in  un file chiamato c:\temp\<nome host>-VM.csv
 
 prende due parametri d'ingresso:
- nome host esxi
-nome ambiente in cui si trova l'esxi
+ nome cluster esxi
+nome ambiente in cui si trova il cluster
 va lanciato in questo modo:
 
 .\ricava-elenco-nomi-vm-sis-op-in-esxi.ps1 -e pepep.produzione.it -a certificazione
@@ -11,22 +11,30 @@ va lanciato in questo modo:
 
 #>
 
-param ($esxi,$csvName=("C:\temp\" + $esxi + "-VM.csv"), $ambiente)
+param ($cluster, $ambiente)
 
-# Ricava l'elenco vm,sis op, delle macchine contenute nell'esxi e lo salva nel file c:\temp\<nomw esxi>-VM.csv
+# Ricava l'elenco degli host contenuti nel cluster
 
-#$vm_all = ($esxi + ";" + (GET-VM |WHERE-OBJECT {$_.VMHOST -like "$esxi"}|select-object  name,guestid|ft -hidetableheaders -autosize ) )> $csvName
-(GET-VM |WHERE-OBJECT {$_.VMHOST -like "$esxi"}|select-object  name,guestid|ft -hidetableheaders -autosize) > $csvName
+$all_host = get-vmhost |where-object {$_.cluster -like "$cluster"}
+
+foreach ($esxi in $all_host) {
+
+  $csvName= "C:\temp\" + $esxi + "-VM.csv" 
+
+  # Ricava l'elenco vm,sis op, delle macchine contenute nell'esxi e lo salva nel file c:\temp\<nomw esxi>-VM.csv
+
+  #$vm_all = ($esxi + ";" + (GET-VM |WHERE-OBJECT {$_.VMHOST -like "$esxi"}|select-object  name,guestid|ft -hidetableheaders -autosize ) )> $csvName
+  (GET-VM |WHERE-OBJECT {$_.VMHOST -like "$esxi"}|select-object  name,guestid|ft -hidetableheaders -autosize) > $csvName
 
 
-# Ricava il numero delle vm contenute nell'host:
-$n = (GET-VM |WHERE-OBJECT {$_.VMHOST -like "$esxi"}).count
+  # Ricava il numero delle vm contenute nell'host:
+  $n = (GET-VM |WHERE-OBJECT {$_.VMHOST -like "$esxi"}).count
 
 
 
-#Crea una matrice dal contenuto del file e rimuove il file:
+  #Crea una matrice dal contenuto del file e rimuove il file:
 
-$array_vm = get-content -Path $csvName
+  $array_vm = get-content -Path $csvName
 
 
 
@@ -44,19 +52,9 @@ foreach ($vm in $array_vm) {
          if ($vm -match "windows7_64Guest"){
                 ($vm -replace 'windows7_64Guest',';Microsoft Windows 7 (64-bit)')| out-file -FilePath $csvName -Append}   
          
-         
-         if ($vm -match "win2000ServGuest"){
-                ($vm -replace 'win2000ServGuest',';Microsoft Windows 2000 Server')| out-file -FilePath $csvName -Append}   
-         
-         
          if ($vm -match "windows9_64Guest"){
                 ($vm -replace 'windows9_64Guest',';Microsoft Windows 10 (64-bit)')| out-file -FilePath $csvName -Append}   
          
-         if ($vm -match "winXPProGuest"){
-                ($vm -replace 'winXPProGuest',';Microsoft Windows XP Professional (32 bit)')| out-file -FilePath $csvName -Append}   
-         
-          
-          
           if ($vm -match "windows7Guest"){
                 ($vm -replace 'windows7Guest',';Microsoft Windows 7 (32 bit)')| out-file -FilePath $csvName -Append}   
          
@@ -104,9 +102,8 @@ foreach ($vm in $array_vm) {
          
           if ($vm -match "debian5_64Guest"){
                 ($vm -replace 'debian5_64Guest',';Debian 5 Linux (64-bit)')| out-file -FilePath $csvName -Append}   
-         if ($vm -match "rhel5Guest"){
-                ($vm -replace 'rhel5Guest',';RED HAT ENTERPRISE LINUX 5 (32 bit)')| out-file -FilePath $csvName -Append}   
-                
+         
+
          if ($vm -match "rhel5_64Guest"){
                 ($vm -replace 'rhel5_64Guest',';RED HAT ENTERPRISE LINUX 5')| out-file -FilePath $csvName -Append}   
          if ($vm -match "rhel6_64Guest"){
@@ -151,3 +148,4 @@ $diff =  $n - (get-content c:\temp\$esxi-VM.csv|measure-object -line).lines
 if ($diff > 0) {write-host ("ci sono ancora $diff macchine non censite sull'host")}
 
 
+}
